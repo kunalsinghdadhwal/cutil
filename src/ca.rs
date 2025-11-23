@@ -42,8 +42,12 @@ impl CertificateAuthority {
         params.not_after = time::OffsetDateTime::from_unix_timestamp(not_after.timestamp())
             .map_err(|e| Error::CertGen(format!("Invalid timestamp: {}", e)))?;
 
-        let alg = algorithm.to_rcgen();
-        params.alg = alg;
+        params.alg = match algorithm {
+            CertSigAlgo::Ed25519 => &rcgen::PKCS_ED25519,
+            CertSigAlgo::EcdsaP256 => &rcgen::PKCS_ECDSA_P256_SHA256,
+            CertSigAlgo::EcdsaP384 => &rcgen::PKCS_ECDSA_P384_SHA384,
+            _ => &rcgen::PKCS_RSA_SHA256,
+        };
         params.key_pair = Some(key_pair);
 
         let serial: u64 = 1;
@@ -89,8 +93,12 @@ impl CertificateAuthority {
         params.not_after = time::OffsetDateTime::from_unix_timestamp(not_after.timestamp())
             .map_err(|e| Error::CertGen(format!("Invalid timestamp: {}", e)))?;
 
-        let alg = algorithm.to_rcgen();
-        params.alg = alg;
+        params.alg = match algorithm {
+            CertSigAlgo::Ed25519 => &rcgen::PKCS_ED25519,
+            CertSigAlgo::EcdsaP256 => &rcgen::PKCS_ECDSA_P256_SHA256,
+            CertSigAlgo::EcdsaP384 => &rcgen::PKCS_ECDSA_P384_SHA384,
+            _ => &rcgen::PKCS_RSA_SHA256,
+        };
         params.key_pair = Some(key_pair);
 
         let certificate = Certificate::from_params(params)?;
@@ -167,8 +175,12 @@ impl CertificateAuthority {
         params.not_after = time::OffsetDateTime::from_unix_timestamp(not_after.timestamp())
             .map_err(|e| Error::CertGen(format!("Invalid timestamp: {}", e)))?;
 
-        let alg = algorithm.to_rcgen();
-        params.alg = alg;
+        params.alg = match algorithm {
+            CertSigAlgo::Ed25519 => &rcgen::PKCS_ED25519,
+            CertSigAlgo::EcdsaP256 => &rcgen::PKCS_ECDSA_P256_SHA256,
+            CertSigAlgo::EcdsaP384 => &rcgen::PKCS_ECDSA_P384_SHA384,
+            _ => &rcgen::PKCS_RSA_SHA256,
+        };
         params.key_pair = Some(key_pair);
 
         let serial = self.next_serial;
@@ -303,25 +315,16 @@ impl IssuedCertificate {
             chain_der.push(pem_to_der(cert_pem)?);
         }
 
-        let chain_refs: Vec<&[u8]> = chain_der.iter().map(|c| c.as_slice()).collect();
-
         let name = if friendly_name.is_empty() {
             "certificate"
         } else {
             friendly_name
         };
 
-        let pfx = if chain_refs.is_empty() {
-            p12::PFX::new(&cert_der, &key_der, None, password, name)
-        } else {
-            let chain_slice: &[&[u8]] = &chain_refs;
-            p12::PFX::new(&cert_der, &key_der, Some(chain_slice), password, name)
-        };
+        let pfx = p12::PFX::new(&cert_der, &key_der, None, password, name)
+            .ok_or_else(|| Error::Pkcs12("Failed to create PKCS12 structure".to_string()))?;
 
-        match pfx {
-            Ok(p) => p.to_der().map_err(|e| Error::Pkcs12(e.to_string())),
-            Err(e) => Err(Error::Pkcs12(e.to_string())),
-        }
+        pfx.to_der().map_err(|e| Error::Pkcs12(e.to_string()))
     }
 }
 

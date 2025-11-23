@@ -1,8 +1,5 @@
 use crate::error::{Error, Result};
 use colored::Colorize;
-use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
-use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
-use rustls::{ClientConfig, DigitallySignedStruct, SignatureScheme};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -33,7 +30,7 @@ pub struct ParsedCertificate {
 
 #[derive(Debug)]
 struct CertificateCapture {
-    certificates: Arc<Mutex<Vec<CertificateDer<'static>>>>,
+    certificates: Arc<Mutex<Vec<Vec<u8>>>>,
 }
 
 impl CertificateCapture {
@@ -43,75 +40,82 @@ impl CertificateCapture {
         }
     }
 
-    fn get_certificates(&self) -> Vec<CertificateDer<'static>> {
+    fn get_certificates(&self) -> Vec<Vec<u8>> {
         self.certificates.lock().unwrap().clone()
     }
-}
 
-impl ServerCertVerifier for CertificateCapture {
-    fn verify_server_cert(
-        &self,
-        end_entity: &CertificateDer<'_>,
-        intermediates: &[CertificateDer<'_>],
-        _server_name: &ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: UnixTime,
-    ) -> std::result::Result<ServerCertVerified, rustls::Error> {
-        let mut certs = self.certificates.lock().unwrap();
-        certs.clear();
-        certs.push(end_entity.clone().into_owned());
-        for cert in intermediates {
-            certs.push(cert.clone().into_owned());
-        }
-        Ok(ServerCertVerified::assertion())
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        _message: &[u8],
-        _cert: &CertificateDer<'_>,
-        _dss: &DigitallySignedStruct,
-    ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
-        Ok(HandshakeSignatureValid::assertion())
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        _message: &[u8],
-        _cert: &CertificateDer<'_>,
-        _dss: &DigitallySignedStruct,
-    ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
-        Ok(HandshakeSignatureValid::assertion())
-    }
-
-    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-        vec![
-            SignatureScheme::RSA_PKCS1_SHA256,
-            SignatureScheme::RSA_PKCS1_SHA384,
-            SignatureScheme::RSA_PKCS1_SHA512,
-            SignatureScheme::ECDSA_NISTP256_SHA256,
-            SignatureScheme::ECDSA_NISTP384_SHA384,
-            SignatureScheme::ECDSA_NISTP521_SHA512,
-            SignatureScheme::RSA_PSS_SHA256,
-            SignatureScheme::RSA_PSS_SHA384,
-            SignatureScheme::RSA_PSS_SHA512,
-            SignatureScheme::ED25519,
-        ]
+    fn add_certificate(&self, cert: Vec<u8>) {
+        self.certificates.lock().unwrap().push(cert);
     }
 }
 
 pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChainInfo> {
+    use rustls::pki_types::{CertificateDer, ServerName};
+    use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+    use rustls::{DigitallySignedStruct, SignatureScheme};
+    use rustls::pki_types::UnixTime;
+
+    struct SimpleVerifier {
+        certs: Arc<Mutex<Vec<Vec<u8>>>>,
+    }
+
+    impl ServerCertVerifier for SimpleVerifier {
+        fn verify_server_cert(
+            &self,
+            end_entity: &CertificateDer<'_>,
+            intermediates: &[CertificateDer<'_>],
+            _server_name: &ServerName<'_>,
+            _ocsp_response: &[u8],
+            _now: UnixTime,
+        ) -> std::result::Result<ServerCertVerified, rustls::Error> {
+            let mut certs = self.certs.lock().unwrap();
+            certs.clear();
+            certs.push(end_entity.to_vec());
+            for cert in intermediates {
+                certs.push(cert.to_vec());
+            }
+            Ok(ServerCertVerified::assertion())
+        }
+
+        fn verify_tls12_signature(
+            &self,
+            _message: &[u8],
+            _cert: &CertificateDer<'_>,
+            _dss: &DigitallySignedStruct,
+        ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+
+        fn verify_tls13_signature(
+            &self,
+            _message: &[u8],
+            _cert: &CertificateDer<'_>,
+            _dss: &DigitallySignedStruct,
+        ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+
+        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+            vec![
+                SignatureScheme::RSA_PKCS1_SHA256,
+                SignatureScheme::ECDSA_NISTP256_SHA256,
+                SignatureScheme::ED25519,
+            ]
+        }
+    }
+
     let server_name = ServerName::try_from(host.to_string())
         .map_err(|e| Error::DnsName(format!("Invalid DNS name '{}': {}", host, e)))?;
 
-    let cert_capture = Arc::new(CertificateCapture::new());
+    let cert_storage = Arc::new(Mutex::new(Vec::new()));
+    let verifier = Arc::new(SimpleVerifier { certs: cert_storage.clone() });
 
-    let config = ClientConfig::builder()
+    let config = rustls::ClientConfig::builder()
         .dangerous()
-        .with_custom_certificate_verifier(cert_capture.clone())
+        .with_custom_certificate_verifier(verifier)
         .with_no_client_auth();
 
-    let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name.clone())
+    let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name)
         .map_err(|e| Error::Tls(format!("Failed to create TLS connection: {}", e)))?;
 
     let addr = format!("{}:{}", host, port);
@@ -130,7 +134,7 @@ pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChain
     let mut response = vec![0u8; 1024];
     let _ = tls.read(&mut response);
 
-    let raw_certs = cert_capture.get_certificates();
+    let raw_certs = cert_storage.lock().unwrap().clone();
     if raw_certs.is_empty() {
         return Err(Error::NotFound("No certificates received".to_string()));
     }
@@ -150,7 +154,7 @@ fn parse_certificate(cert_der: &[u8]) -> Result<ParsedCertificate> {
 
     let subject = format_dn(&x509.subject);
     let issuer = format_dn(&x509.issuer);
-    let serial_number = format_serial(x509.serial.as_ref());
+    let serial_number = format_serial(x509.serial.to_bytes_be().as_slice());
 
     let not_before = x509.validity.not_before.to_string();
     let not_after = x509.validity.not_after.to_string();

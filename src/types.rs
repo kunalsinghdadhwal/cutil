@@ -12,7 +12,7 @@ pub enum CertSigAlgo {
 }
 
 impl CertSigAlgo {
-    pub fn to_rcgen(&self) -> &rcgen::SignatureAlgorithm {
+    pub fn to_rcgen(&self) -> &'static rcgen::SignatureAlgorithm {
         match self {
             CertSigAlgo::Ed25519 => &rcgen::PKCS_ED25519,
             CertSigAlgo::EcdsaP256 => &rcgen::PKCS_ECDSA_P256_SHA256,
@@ -24,7 +24,15 @@ impl CertSigAlgo {
     }
 
     pub fn key_pair(&self) -> Result<rcgen::KeyPair, crate::Error> {
-        rcgen::KeyPair::generate(self.to_rcgen()).map_err(|e| crate::Error::CertGen(e.to_string()))
+        let alg = match self {
+            CertSigAlgo::Ed25519 => &rcgen::PKCS_ED25519,
+            CertSigAlgo::EcdsaP256 => &rcgen::PKCS_ECDSA_P256_SHA256,
+            CertSigAlgo::EcdsaP384 => &rcgen::PKCS_ECDSA_P384_SHA384,
+            CertSigAlgo::Rsa2048 | CertSigAlgo::Rsa3072 | CertSigAlgo::Rsa4096 => {
+                &rcgen::PKCS_RSA_SHA256
+            }
+        };
+        rcgen::KeyPair::generate(alg).map_err(|e| crate::Error::CertGen(e.to_string()))
     }
 
     pub fn name(&self) -> &'static str {
