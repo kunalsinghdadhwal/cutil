@@ -16,10 +16,9 @@ required-features = ["cli"]
 
 [dependencies]
 rcgen = { version = "0.12", features = ["x509-parser"] }
-rustls = { version = "0.23", default-features = false, features = ["ring"] }
-rustls-pemfile = "2.1"
-rustls-pki-types = "1.7"
-webpki = { package = "rustls-webpki", version = "0.102", features = ["std"] }
+rustls = { version = "0.21", default-features = false, features = ["dangerous_configuration"] }
+rustls-pemfile = "1.0"
+webpki = "0.22"
 x509-parser = "0.16"
 thiserror = "1.0"
 chrono = "0.4"

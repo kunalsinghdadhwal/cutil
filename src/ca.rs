@@ -324,7 +324,7 @@ impl IssuedCertificate {
         let pfx = p12::PFX::new(&cert_der, &key_der, None, password, name)
             .ok_or_else(|| Error::Pkcs12("Failed to create PKCS12 structure".to_string()))?;
 
-        pfx.to_der().map_err(|e| Error::Pkcs12(e.to_string()))
+        Ok(pfx.to_der())
     }
 }
 

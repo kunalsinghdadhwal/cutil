@@ -1,5 +1,8 @@
 use crate::error::{Error, Result};
 use colored::Colorize;
+use rustls::client::ServerCertVerifier;
+use rustls::{Certificate, ClientConfig, ClientConnection, ServerName, StreamOwned};
+use std::convert::TryFrom;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -28,7 +31,6 @@ pub struct ParsedCertificate {
     pub validity_status: String,
 }
 
-#[derive(Debug)]
 struct CertificateCapture {
     certificates: Arc<Mutex<Vec<Vec<u8>>>>,
 }
@@ -43,86 +45,47 @@ impl CertificateCapture {
     fn get_certificates(&self) -> Vec<Vec<u8>> {
         self.certificates.lock().unwrap().clone()
     }
+}
 
-    fn add_certificate(&self, cert: Vec<u8>) {
-        self.certificates.lock().unwrap().push(cert);
+impl ServerCertVerifier for CertificateCapture {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &Certificate,
+        intermediates: &[Certificate],
+        _server_name: &ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: std::time::SystemTime,
+    ) -> std::result::Result<rustls::client::ServerCertVerified, rustls::Error> {
+        let mut certs = self.certificates.lock().unwrap();
+        certs.clear();
+        certs.push(_end_entity.0.clone());
+        for cert in intermediates {
+            certs.push(cert.0.clone());
+        }
+        Ok(rustls::client::ServerCertVerified::assertion())
     }
 }
 
 pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChainInfo> {
-    use rustls::pki_types::{CertificateDer, ServerName};
-    use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
-    use rustls::{DigitallySignedStruct, SignatureScheme};
-    use rustls::pki_types::UnixTime;
-
-    struct SimpleVerifier {
-        certs: Arc<Mutex<Vec<Vec<u8>>>>,
-    }
-
-    impl ServerCertVerifier for SimpleVerifier {
-        fn verify_server_cert(
-            &self,
-            end_entity: &CertificateDer<'_>,
-            intermediates: &[CertificateDer<'_>],
-            _server_name: &ServerName<'_>,
-            _ocsp_response: &[u8],
-            _now: UnixTime,
-        ) -> std::result::Result<ServerCertVerified, rustls::Error> {
-            let mut certs = self.certs.lock().unwrap();
-            certs.clear();
-            certs.push(end_entity.to_vec());
-            for cert in intermediates {
-                certs.push(cert.to_vec());
-            }
-            Ok(ServerCertVerified::assertion())
-        }
-
-        fn verify_tls12_signature(
-            &self,
-            _message: &[u8],
-            _cert: &CertificateDer<'_>,
-            _dss: &DigitallySignedStruct,
-        ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
-            Ok(HandshakeSignatureValid::assertion())
-        }
-
-        fn verify_tls13_signature(
-            &self,
-            _message: &[u8],
-            _cert: &CertificateDer<'_>,
-            _dss: &DigitallySignedStruct,
-        ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
-            Ok(HandshakeSignatureValid::assertion())
-        }
-
-        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-            vec![
-                SignatureScheme::RSA_PKCS1_SHA256,
-                SignatureScheme::ECDSA_NISTP256_SHA256,
-                SignatureScheme::ED25519,
-            ]
-        }
-    }
-
-    let server_name = ServerName::try_from(host.to_string())
+    let server_name = ServerName::try_from(host)
         .map_err(|e| Error::DnsName(format!("Invalid DNS name '{}': {}", host, e)))?;
 
-    let cert_storage = Arc::new(Mutex::new(Vec::new()));
-    let verifier = Arc::new(SimpleVerifier { certs: cert_storage.clone() });
+    let cert_capture = Arc::new(CertificateCapture::new());
 
-    let config = rustls::ClientConfig::builder()
-        .dangerous()
-        .with_custom_certificate_verifier(verifier)
+    let config = ClientConfig::builder()
+        .with_safe_defaults()
+        .with_custom_certificate_verifier(cert_capture.clone())
         .with_no_client_auth();
 
-    let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name)
+    let mut conn = ClientConnection::new(Arc::new(config), server_name)
         .map_err(|e| Error::Tls(format!("Failed to create TLS connection: {}", e)))?;
 
     let addr = format!("{}:{}", host, port);
-    let mut sock = TcpStream::connect(&addr)
+    let sock = TcpStream::connect(&addr)
         .map_err(|e| Error::Connection(format!("Failed to connect to {}: {}", addr, e)))?;
 
-    let mut tls = rustls::Stream::new(&mut conn, &mut sock);
+    let mut tls = StreamOwned::new(conn, sock);
 
     let request = format!(
         "GET / HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
@@ -134,7 +97,7 @@ pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChain
     let mut response = vec![0u8; 1024];
     let _ = tls.read(&mut response);
 
-    let raw_certs = cert_storage.lock().unwrap().clone();
+    let raw_certs = cert_capture.get_certificates();
     if raw_certs.is_empty() {
         return Err(Error::NotFound("No certificates received".to_string()));
     }
@@ -533,3 +496,4 @@ pub fn save_chain_to_file(chain: &CertificateChainInfo, path: &str) -> Result<()
 
     Ok(())
 }
+
