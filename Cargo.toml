@@ -15,7 +15,7 @@ path = "src/main.rs"
 required-features = ["cli"]
 
 [dependencies]
-rcgen = { version = "0.13", features = ["x509-parser"] }
+rcgen = { version = "0.12", features = ["x509-parser"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 rustls-pemfile = "2.1"
 rustls-pki-types = "1.7"
@@ -31,6 +31,7 @@ p12 = "0.6"
 yasna = "0.5"
 der-parser = "9.0"
 oid-registry = "0.7"
+time = { version = "0.3", features = ["std"] }
 
 [features]
 default = []

@@ -1,11 +1,10 @@
 use crate::error::{Error, Result};
 use crate::types::{
     CertSigAlgo, CertType, CertificateRequest, DistinguishedName, RevocationReason,
-    RevokedCertificate, SubjectAltName,
+    RevokedCertificate,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use rcgen::{Certificate, CertificateParams, KeyPair};
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
