@@ -24,26 +24,7 @@ impl CertSigAlgo {
     }
 
     pub fn key_pair(&self) -> Result<rcgen::KeyPair, crate::Error> {
-        match self {
-            CertSigAlgo::Ed25519 => rcgen::KeyPair::generate(self.to_rcgen())
-                .map_err(|e| crate::Error::CertGen(e.to_string())),
-            CertSigAlgo::EcdsaP256 => rcgen::KeyPair::generate(self.to_rcgen())
-                .map_err(|e| crate::Error::CertGen(e.to_string())),
-            CertSigAlgo::EcdsaP384 => rcgen::KeyPair::generate(self.to_rcgen())
-                .map_err(|e| crate::Error::CertGen(e.to_string())),
-            CertSigAlgo::Rsa2048 => {
-                rcgen::KeyPair::generate_for(&rcgen::PKCS_RSA_SHA256)
-                    .map_err(|e| crate::Error::CertGen(e.to_string()))
-            }
-            CertSigAlgo::Rsa3072 => {
-                rcgen::KeyPair::generate_for(&rcgen::PKCS_RSA_SHA256)
-                    .map_err(|e| crate::Error::CertGen(e.to_string()))
-            }
-            CertSigAlgo::Rsa4096 => {
-                rcgen::KeyPair::generate_for(&rcgen::PKCS_RSA_SHA256)
-                    .map_err(|e| crate::Error::CertGen(e.to_string()))
-            }
-        }
+        rcgen::KeyPair::generate(self.to_rcgen()).map_err(|e| crate::Error::CertGen(e.to_string()))
     }
 
     pub fn name(&self) -> &'static str {
@@ -229,10 +210,7 @@ impl CertificateRequest {
             ),
             CertType::Both => (
                 vec![KeyUsage::DigitalSignature, KeyUsage::KeyEncipherment],
-                vec![
-                    ExtendedKeyUsage::ServerAuth,
-                    ExtendedKeyUsage::ClientAuth,
-                ],
+                vec![ExtendedKeyUsage::ServerAuth, ExtendedKeyUsage::ClientAuth],
             ),
         };
 

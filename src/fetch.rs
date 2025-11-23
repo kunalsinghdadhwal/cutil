@@ -2,7 +2,7 @@ use crate::error::{Error, Result};
 use colored::Colorize;
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
-use rustls::{ClientConfig, ClientConnection, DigitallySignedStruct, SignatureScheme, StreamOwned};
+use rustls::{ClientConfig, DigitallySignedStruct, SignatureScheme};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -31,6 +31,7 @@ pub struct ParsedCertificate {
     pub validity_status: String,
 }
 
+#[derive(Debug)]
 struct CertificateCapture {
     certificates: Arc<Mutex<Vec<CertificateDer<'static>>>>,
 }
@@ -105,21 +106,19 @@ pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChain
 
     let cert_capture = Arc::new(CertificateCapture::new());
 
-    let mut config = ClientConfig::builder()
+    let config = ClientConfig::builder()
         .dangerous()
         .with_custom_certificate_verifier(cert_capture.clone())
         .with_no_client_auth();
 
-    config.alpn_protocols = vec![b"http/1.1".to_vec()];
-
-    let mut conn = ClientConnection::new(Arc::new(config), server_name)
+    let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name.clone())
         .map_err(|e| Error::Tls(format!("Failed to create TLS connection: {}", e)))?;
 
     let addr = format!("{}:{}", host, port);
     let mut sock = TcpStream::connect(&addr)
         .map_err(|e| Error::Connection(format!("Failed to connect to {}: {}", addr, e)))?;
 
-    let mut tls = StreamOwned::new(conn, sock);
+    let mut tls = rustls::Stream::new(&mut conn, &mut sock);
 
     let request = format!(
         "GET / HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
@@ -128,8 +127,8 @@ pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChain
     tls.write_all(request.as_bytes())
         .map_err(|e| Error::Connection(format!("Failed to send request: {}", e)))?;
 
-    let mut response = Vec::new();
-    let _ = tls.read_to_end(&mut response);
+    let mut response = vec![0u8; 1024];
+    let _ = tls.read(&mut response);
 
     let raw_certs = cert_capture.get_certificates();
     if raw_certs.is_empty() {
@@ -151,7 +150,7 @@ fn parse_certificate(cert_der: &[u8]) -> Result<ParsedCertificate> {
 
     let subject = format_dn(&x509.subject);
     let issuer = format_dn(&x509.issuer);
-    let serial_number = format_serial(&x509.serial);
+    let serial_number = format_serial(x509.serial.as_ref());
 
     let not_before = x509.validity.not_before.to_string();
     let not_after = x509.validity.not_after.to_string();
@@ -171,14 +170,14 @@ fn parse_certificate(cert_der: &[u8]) -> Result<ParsedCertificate> {
 
     let signature_algorithm = x509.signature_algorithm.algorithm.to_string();
 
-    let (public_key_algorithm, public_key_size) = match &x509.public_key().parsed {
-        Ok(PublicKey::RSA(rsa)) => {
+    let (public_key_algorithm, public_key_size) = match x509.public_key().parsed() {
+        Ok(x509_parser::public_key::PublicKey::RSA(rsa)) => {
             let size = rsa.key_size();
             ("RSA".to_string(), Some(size * 8))
         }
-        Ok(PublicKey::EC(ec)) => ("ECDSA".to_string(), None),
-        Ok(PublicKey::DSA(_)) => ("DSA".to_string(), None),
-        Ok(PublicKey::Unknown(_)) => ("Unknown".to_string(), None),
+        Ok(x509_parser::public_key::PublicKey::EC(_)) => ("ECDSA".to_string(), None),
+        Ok(x509_parser::public_key::PublicKey::DSA(_)) => ("DSA".to_string(), None),
+        Ok(x509_parser::public_key::PublicKey::Unknown(_)) => ("Unknown".to_string(), None),
         _ => ("Unknown".to_string(), None),
     };
 
@@ -530,4 +529,3 @@ pub fn save_chain_to_file(chain: &CertificateChainInfo, path: &str) -> Result<()
 
     Ok(())
 }
-
