@@ -78,7 +78,7 @@ pub fn fetch_certificate_chain(host: &str, port: u16) -> Result<CertificateChain
         .with_custom_certificate_verifier(cert_capture.clone())
         .with_no_client_auth();
 
-    let mut conn = ClientConnection::new(Arc::new(config), server_name)
+    let conn = ClientConnection::new(Arc::new(config), server_name)
         .map_err(|e| Error::Tls(format!("Failed to create TLS connection: {}", e)))?;
 
     let addr = format!("{}:{}", host, port);
@@ -496,4 +496,3 @@ pub fn save_chain_to_file(chain: &CertificateChainInfo, path: &str) -> Result<()
 
     Ok(())
 }
-

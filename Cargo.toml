@@ -1,16 +1,16 @@
 [package]
-name = "certutil"
+name = "cutil"
 version = "0.1.0"
 edition = "2021"
-authors = ["certutil contributors"]
+authors = ["cutil contributors"]
 description = "A complete internal PKI toolkit for Rust"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/certutil"
+repository = "https://github.com/yourusername/cutil"
 keywords = ["pki", "certificate", "tls", "x509", "ca"]
 categories = ["cryptography", "network-programming"]
 
 [[bin]]
-name = "certutil"
+name = "cutil"
 path = "src/main.rs"
 required-features = ["cli"]
 

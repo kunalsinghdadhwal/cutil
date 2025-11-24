@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 #[cfg(feature = "cli")]
 #[derive(Parser)]
-#[command(name = "certutil")]
+#[command(name = "cutil")]
 #[command(version, about = "A complete internal PKI toolkit", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
@@ -316,18 +316,18 @@ pub fn run_cli() -> Result<()> {
                 }
             };
 
-            let mut builder = CertificateBuilder::new(cn, c_type)
-                .with_algorithm(algo)
-                .with_validity_days(validity);
-
-            let mut subject = DistinguishedName::new(builder.build().0.subject.common_name.clone());
+            let mut subject = DistinguishedName::new(cn.clone());
             if let Some(o) = org {
                 subject = subject.with_organization(o);
             }
             if let Some(u) = ou {
                 subject = subject.with_organizational_unit(u);
             }
-            builder = builder.with_subject(subject);
+
+            let mut builder = CertificateBuilder::new(cn, c_type)
+                .with_algorithm(algo)
+                .with_validity_days(validity)
+                .with_subject(subject);
 
             for d in dns {
                 builder = builder.with_dns_san(d);
@@ -500,4 +500,3 @@ fn decode_hex(s: &str) -> Result<Vec<u8>> {
 
     Ok(result)
 }
-

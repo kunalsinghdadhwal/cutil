@@ -14,6 +14,7 @@ pub struct CertificateAuthority {
     key_pem: String,
     next_serial: u64,
     revoked_certs: Vec<RevokedCertificate>,
+    #[allow(dead_code)]
     algorithm: CertSigAlgo,
     chain: Vec<String>,
 }

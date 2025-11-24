@@ -1,1 +1,15 @@
 /target
+Cargo.lock
+*.pem
+*.crt
+*.key
+*.csr
+*.der
+*.p12
+*.pfx
+*.crl
+*.srl
+.DS_Store
+*.swp
+*.swo
+*~

@@ -1,6 +1,6 @@
 use crate::ca::{CertificateAuthority, IssuedCertificate};
 use crate::error::Result;
-use crate::types::{CertSigAlgo, CertType, CertificateRequest, DistinguishedName, SubjectAltName};
+use crate::types::{CertSigAlgo, CertType, CertificateRequest, DistinguishedName};
 use std::net::IpAddr;
 
 pub struct CertificateBuilder {

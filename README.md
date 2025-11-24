@@ -1,4 +1,4 @@
-# CertUtil
+# CUtil
 
 A complete internal PKI (Public Key Infrastructure) toolkit for Rust that provides certificate authority management, certificate issuance, and remote certificate inspection.
 
@@ -39,21 +39,21 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-certutil = "0.1"
+cutil = "0.1"
 ```
 
 For CLI support:
 
 ```toml
 [dependencies]
-certutil = { version = "0.1", features = ["cli"] }
+cutil = { version = "0.1", features = ["cli"] }
 ```
 
 For JSON output:
 
 ```toml
 [dependencies]
-certutil = { version = "0.1", features = ["json"] }
+cutil = { version = "0.1", features = ["json"] }
 ```
 
 ## Usage
@@ -63,8 +63,8 @@ certutil = { version = "0.1", features = ["json"] }
 #### Create a Root CA
 
 ```rust
-use certutil::ca::CertificateAuthority;
-use certutil::types::{CertSigAlgo, DistinguishedName};
+use cutil::ca::CertificateAuthority;
+use cutil::types::{CertSigAlgo, DistinguishedName};
 
 let subject = DistinguishedName::new("My Root CA")
     .with_organization("My Company")
@@ -82,9 +82,9 @@ ca.save_pem("ca.pem", "ca-key.pem")?;
 #### Issue a Server Certificate
 
 ```rust
-use certutil::ca::CertificateAuthority;
-use certutil::cert::CertificateBuilder;
-use certutil::types::CertSigAlgo;
+use cutil::ca::CertificateAuthority;
+use cutil::cert::CertificateBuilder;
+use cutil::types::CertSigAlgo;
 
 let mut ca = CertificateAuthority::load_pem(
     "ca.pem",
@@ -104,7 +104,7 @@ cert.save_pem("server.pem", "server-key.pem")?;
 #### Issue a Client Certificate
 
 ```rust
-use certutil::cert::CertificateBuilder;
+use cutil::cert::CertificateBuilder;
 
 let cert = CertificateBuilder::client("user@example.com")
     .with_email_san("user@example.com")
@@ -117,7 +117,7 @@ cert.save_pem("client.pem", "client-key.pem")?;
 #### Fetch and Inspect Remote Certificates
 
 ```rust
-use certutil::fetch::{fetch_certificate_chain, display_certificate_chain, OutputFormat};
+use cutil::fetch::{fetch_certificate_chain, display_certificate_chain, OutputFormat};
 
 let chain = fetch_certificate_chain("example.com", 443)?;
 let output = display_certificate_chain(&chain, OutputFormat::Pretty)?;
@@ -134,7 +134,7 @@ std::fs::write("certificate.p12", p12_data)?;
 #### Revoke a Certificate
 
 ```rust
-use certutil::types::RevocationReason;
+use cutil::types::RevocationReason;
 
 ca.revoke_certificate(cert.serial_number, RevocationReason::Superseded)?;
 let crl = ca.generate_crl()?;
@@ -152,7 +152,7 @@ cargo build --release --features cli
 #### Initialize a Root CA
 
 ```bash
-certutil init \
+cutil init \
     --cn "My Root CA" \
     --org "My Company" \
     --country US \
@@ -165,7 +165,7 @@ certutil init \
 #### Issue a Server Certificate
 
 ```bash
-certutil cert \
+cutil cert \
     --cn example.com \
     --cert-type server \
     --dns example.com,www.example.com,api.example.com \
@@ -180,14 +180,14 @@ certutil cert \
 #### Fetch Remote Certificate Chain
 
 ```bash
-certutil fetch google.com:443 --format pretty
-certutil fetch github.com:443 --format json --output github-certs.json
+cutil fetch google.com:443 --format pretty
+cutil fetch github.com:443 --format json --output github-certs.json
 ```
 
 #### Revoke a Certificate
 
 ```bash
-certutil revoke \
+cutil revoke \
     --serial 01:02:03:04:05:06:07:08 \
     --reason key-compromise \
     --ca-cert ca.pem \
@@ -197,7 +197,7 @@ certutil revoke \
 #### Generate CRL
 
 ```bash
-certutil crl \
+cutil crl \
     --ca-cert ca.pem \
     --ca-key ca-key.pem \
     --output ca.crl

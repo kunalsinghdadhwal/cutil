@@ -1,7 +1,7 @@
 #[cfg(feature = "cli")]
-use certutil::cli::run_cli;
-#[cfg(feature = "cli")]
 use colored::Colorize;
+#[cfg(feature = "cli")]
+use cutil::cli::run_cli;
 
 #[cfg(feature = "cli")]
 fn main() {

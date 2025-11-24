@@ -1,6 +1,6 @@
-use certutil::ca::CertificateAuthority;
-use certutil::cert::CertificateBuilder;
-use certutil::types::{CertSigAlgo, DistinguishedName};
+use cutil::ca::CertificateAuthority;
+use cutil::cert::CertificateBuilder;
+use cutil::types::{CertSigAlgo, DistinguishedName};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Creating a Root CA...");

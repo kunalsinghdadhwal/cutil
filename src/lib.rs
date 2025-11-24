@@ -1,4 +1,4 @@
-//! CertUtil - A complete internal PKI toolkit for Rust
+//! CUtil - A complete internal PKI toolkit for Rust
 //!
 //! This library provides a comprehensive set of tools for managing an internal
 //! Public Key Infrastructure (PKI), including:
@@ -14,8 +14,8 @@
 //! ## Creating a Root CA
 //!
 //! ```no_run
-//! use certutil::ca::CertificateAuthority;
-//! use certutil::types::{CertSigAlgo, DistinguishedName};
+//! use cutil::ca::CertificateAuthority;
+//! use cutil::types::{CertSigAlgo, DistinguishedName};
 //!
 //! let subject = DistinguishedName::new("My Root CA")
 //!     .with_organization("My Company")
@@ -33,9 +33,9 @@
 //! ## Issuing a Server Certificate
 //!
 //! ```no_run
-//! use certutil::ca::CertificateAuthority;
-//! use certutil::cert::CertificateBuilder;
-//! use certutil::types::CertSigAlgo;
+//! use cutil::ca::CertificateAuthority;
+//! use cutil::cert::CertificateBuilder;
+//! use cutil::types::CertSigAlgo;
 //!
 //! let mut ca = CertificateAuthority::load_pem(
 //!     "ca.pem",
@@ -56,7 +56,7 @@
 //! ## Fetching Remote Certificate Chain
 //!
 //! ```no_run
-//! use certutil::fetch::{fetch_certificate_chain, display_certificate_chain, OutputFormat};
+//! use cutil::fetch::{fetch_certificate_chain, display_certificate_chain, OutputFormat};
 //!
 //! let chain = fetch_certificate_chain("example.com", 443).unwrap();
 //! let output = display_certificate_chain(&chain, OutputFormat::Pretty).unwrap();
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_issue_client_certificate() {
         let subject = DistinguishedName::new("Test CA");
-        let mut ca = CertificateAuthority::new_root(subject, CertSigAlgo::Rsa2048, 365).unwrap();
+        let mut ca = CertificateAuthority::new_root(subject, CertSigAlgo::EcdsaP256, 365).unwrap();
 
         let cert = CertificateBuilder::client("user@example.com")
             .with_email_san("user@example.com")
