@@ -346,10 +346,8 @@ impl RevocationReason {
     }
 }
 
-#[cfg(feature = "json")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "json")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CertificateInfo {
     pub subject: String,

@@ -1,4 +1,4 @@
-use cutil::fetch::{display_certificate_chain, fetch_certificate_chain, OutputFormat};
+use cutil::fetch::{OutputFormat, display_certificate_chain, fetch_certificate_chain};
 use std::env;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

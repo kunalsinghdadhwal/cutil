@@ -292,14 +292,12 @@ pub fn display_certificate_chain(
 ) -> Result<String> {
     match format {
         OutputFormat::Pretty => display_pretty(chain),
-        #[cfg(feature = "json")]
         OutputFormat::Json => display_json(chain),
     }
 }
 
 pub enum OutputFormat {
     Pretty,
-    #[cfg(feature = "json")]
     Json,
 }
 
@@ -426,8 +424,6 @@ fn display_pretty(chain: &CertificateChainInfo) -> Result<String> {
 
     Ok(output)
 }
-
-#[cfg(feature = "json")]
 fn display_json(chain: &CertificateChainInfo) -> Result<String> {
     use serde::Serialize;
 

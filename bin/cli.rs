@@ -1,21 +1,12 @@
-#[cfg(feature = "cli")]
-use crate::ca::CertificateAuthority;
-#[cfg(feature = "cli")]
-use crate::cert::CertificateBuilder;
-#[cfg(feature = "cli")]
-use crate::error::Result;
-#[cfg(feature = "cli")]
-use crate::fetch::{display_certificate_chain, fetch_certificate_chain, OutputFormat};
-#[cfg(feature = "cli")]
-use crate::types::{CertSigAlgo, CertType, DistinguishedName, RevocationReason};
-#[cfg(feature = "cli")]
 use clap::{Parser, Subcommand};
-#[cfg(feature = "cli")]
 use colored::Colorize;
-#[cfg(feature = "cli")]
+use cutil::ca::CertificateAuthority;
+use cutil::cert::CertificateBuilder;
+use cutil::error::Result;
+use cutil::fetch::{OutputFormat, display_certificate_chain, fetch_certificate_chain};
+use cutil::types::{CertSigAlgo, CertType, DistinguishedName, RevocationReason};
 use std::path::PathBuf;
 
-#[cfg(feature = "cli")]
 #[derive(Parser)]
 #[command(name = "cutil")]
 #[command(version, about = "A complete internal PKI toolkit", long_about = None)]
@@ -24,7 +15,6 @@ pub struct Cli {
     pub command: Commands,
 }
 
-#[cfg(feature = "cli")]
 #[derive(Subcommand)]
 pub enum Commands {
     #[command(about = "Initialize a new Certificate Authority")]
@@ -209,7 +199,6 @@ pub enum Commands {
     },
 }
 
-#[cfg(feature = "cli")]
 pub fn run_cli() -> Result<()> {
     let cli = Cli::parse();
 
@@ -250,12 +239,12 @@ pub fn run_cli() -> Result<()> {
 
             if intermediate {
                 let parent_cert_path = parent_cert.ok_or_else(|| {
-                    crate::error::Error::InvalidInput(
+                    cutil::error::Error::InvalidInput(
                         "Parent CA certificate required for intermediate CA".to_string(),
                     )
                 })?;
                 let parent_key_path = parent_key.ok_or_else(|| {
-                    crate::error::Error::InvalidInput(
+                    cutil::error::Error::InvalidInput(
                         "Parent CA key required for intermediate CA".to_string(),
                     )
                 })?;
@@ -309,10 +298,10 @@ pub fn run_cli() -> Result<()> {
                 "client" => CertType::Client,
                 "both" => CertType::Both,
                 _ => {
-                    return Err(crate::error::Error::InvalidInput(format!(
+                    return Err(cutil::error::Error::InvalidInput(format!(
                         "Invalid cert type: {}",
                         cert_type
-                    )))
+                    )));
                 }
             };
 
@@ -378,14 +367,14 @@ pub fn run_cli() -> Result<()> {
         } => {
             let parts: Vec<&str> = target.split(':').collect();
             if parts.len() != 2 {
-                return Err(crate::error::Error::InvalidInput(
+                return Err(cutil::error::Error::InvalidInput(
                     "Target must be in format host:port".to_string(),
                 ));
             }
 
             let host = parts[0];
             let port: u16 = parts[1].parse().map_err(|_| {
-                crate::error::Error::InvalidInput("Invalid port number".to_string())
+                cutil::error::Error::InvalidInput("Invalid port number".to_string())
             })?;
 
             println!(
@@ -397,13 +386,12 @@ pub fn run_cli() -> Result<()> {
 
             let output_format = match format.to_lowercase().as_str() {
                 "pretty" => OutputFormat::Pretty,
-                #[cfg(feature = "json")]
                 "json" => OutputFormat::Json,
                 _ => {
-                    return Err(crate::error::Error::InvalidInput(format!(
+                    return Err(cutil::error::Error::InvalidInput(format!(
                         "Invalid format: {}",
                         format
-                    )))
+                    )));
                 }
             };
 
@@ -437,10 +425,10 @@ pub fn run_cli() -> Result<()> {
                 "superseded" => RevocationReason::Superseded,
                 "cessationofoperation" | "cessation" => RevocationReason::CessationOfOperation,
                 _ => {
-                    return Err(crate::error::Error::InvalidInput(format!(
+                    return Err(cutil::error::Error::InvalidInput(format!(
                         "Invalid revocation reason: {}",
                         reason
-                    )))
+                    )));
                 }
             };
 
@@ -482,21 +470,27 @@ pub fn run_cli() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "cli")]
 fn decode_hex(s: &str) -> Result<Vec<u8>> {
     let s = s.replace([':', ' ', '-'], "");
     let mut result = Vec::new();
 
     for i in (0..s.len()).step_by(2) {
         if i + 1 >= s.len() {
-            return Err(crate::error::Error::InvalidInput(
+            return Err(cutil::error::Error::InvalidInput(
                 "Invalid hex string".to_string(),
             ));
         }
         let byte = u8::from_str_radix(&s[i..i + 2], 16)
-            .map_err(|_| crate::error::Error::InvalidInput("Invalid hex character".to_string()))?;
+            .map_err(|_| cutil::error::Error::InvalidInput("Invalid hex character".to_string()))?;
         result.push(byte);
     }
 
     Ok(result)
+}
+
+fn main() {
+    if let Err(e) = run_cli() {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
 }

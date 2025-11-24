@@ -69,14 +69,11 @@ pub mod error;
 pub mod fetch;
 pub mod types;
 
-#[cfg(feature = "cli")]
-pub mod cli;
-
 pub use error::{Error, Result};
 
 pub use ca::{CertificateAuthority, IssuedCertificate};
 pub use cert::CertificateBuilder;
-pub use fetch::{fetch_certificate_chain, CertificateChainInfo, ParsedCertificate};
+pub use fetch::{CertificateChainInfo, ParsedCertificate, fetch_certificate_chain};
 pub use types::{
     CertSigAlgo, CertType, CertificateRequest, DistinguishedName, RevocationReason,
     RevokedCertificate, SubjectAltName,

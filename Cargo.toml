@@ -1,18 +1,19 @@
 [package]
 name = "cutil"
 version = "0.1.0"
-edition = "2021"
-authors = ["cutil contributors"]
+edition = "2024"
+authors = ["Kunal Singh Dadhwal <kunalsinghdadhwal@gmail.com>"]
 description = "A complete internal PKI toolkit for Rust"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/cutil"
+repository = "https://github.com/kunalsinghdadhwal/cutil"
+documentation = "https://docs.rs/cutil"
+homepage = "https://github.com/kunalsinghdadhwal/cutil"
 keywords = ["pki", "certificate", "tls", "x509", "ca"]
 categories = ["cryptography", "network-programming"]
 
 [[bin]]
 name = "cutil"
-path = "src/main.rs"
-required-features = ["cli"]
+path = "bin/cli.rs"
 
 [dependencies]
 rcgen = { version = "0.12", features = ["x509-parser"] }
@@ -23,9 +24,9 @@ x509-parser = "0.16"
 thiserror = "1.0"
 chrono = "0.4"
 colored = "2.1"
-serde = { version = "1.0", optional = true, features = ["derive"] }
-serde_json = { version = "1.0", optional = true }
-clap = { version = "4.5", optional = true, features = ["derive", "cargo"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+clap = { version = "4.5", features = ["derive", "cargo"] }
 p12 = "0.6"
 yasna = "0.5"
 der-parser = "9.0"
@@ -34,8 +35,6 @@ time = { version = "0.3", features = ["std"] }
 
 [features]
 default = []
-cli = ["dep:clap"]
-json = ["dep:serde", "dep:serde_json"]
 
 [dev-dependencies]
 tempfile = "3.10"
