@@ -1,0 +1,98 @@
+name: Release
+
+on:
+    push:
+        tags:
+            - "v*"
+
+env:
+    CARGO_TERM_COLOR: always
+    RUST_BACKTRACE: 1
+
+jobs:
+    build-and-release:
+        name: Build and Release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: x86_64-unknown-linux-gnu
+
+            - name: Extract version from tag
+              id: get_version
+              run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+            - name: Build CLI binary
+              run: |
+                  cargo build --release --bin cutil --target x86_64-unknown-linux-gnu
+                  strip target/x86_64-unknown-linux-gnu/release/cutil
+
+            - name: Prepare release artifacts
+              run: |
+                  mkdir -p release
+                  cp target/x86_64-unknown-linux-gnu/release/cutil release/cutil-x86_64-linux-gnu
+                  cd release
+                  sha256sum cutil-x86_64-linux-gnu > cutil-x86_64-linux-gnu.sha256
+                  sha256sum cutil-x86_64-linux-gnu > SHA256SUMS
+
+            - name: Display checksums
+              run: |
+                  echo "SHA256 Checksums:"
+                  cat release/SHA256SUMS
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: |
+                      release/cutil-x86_64-linux-gnu
+                      release/cutil-x86_64-linux-gnu.sha256
+                      release/SHA256SUMS
+                  body: |
+                      ## CUtil ${{ steps.get_version.outputs.VERSION }}
+
+                      ### Downloads
+
+                      **Linux x86_64 (GNU)**
+                      - Binary: `cutil-x86_64-linux-gnu`
+                      - SHA256: `cutil-x86_64-linux-gnu.sha256`
+
+                      ### Installation
+
+                      ```bash
+                      # Download the binary
+                      wget https://github.com/kunalsinghdadhwal/cutil/releases/download/v${{ steps.get_version.outputs.VERSION }}/cutil-x86_64-linux-gnu
+
+                      # Verify checksum
+                      wget https://github.com/kunalsinghdadhwal/cutil/releases/download/v${{ steps.get_version.outputs.VERSION }}/cutil-x86_64-linux-gnu.sha256
+                      sha256sum -c cutil-x86_64-linux-gnu.sha256
+
+                      # Make executable and install
+                      chmod +x cutil-x86_64-linux-gnu
+                      sudo mv cutil-x86_64-linux-gnu /usr/local/bin/cutil
+                      ```
+
+                      ### Verify Installation
+
+                      ```bash
+                      cutil --version
+                      ```
+
+                      ### What's Changed
+
+                      See the [changelog](https://github.com/kunalsinghdadhwal/cutil/blob/main/CHANGELOG.md) for details.
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: cutil-x86_64-linux-gnu
+                  path: release/cutil-x86_64-linux-gnu

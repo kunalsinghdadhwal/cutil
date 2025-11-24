@@ -1,10 +1,10 @@
-# cutil
-
-A comprehensive Public Key Infrastructure (PKI) toolkit for Rust, providing complete certificate authority management, certificate issuance, revocation, and remote certificate inspection capabilities.
-
 ## Overview
 
-CUtil is designed for developers who need to manage their own internal PKI infrastructure. It provides both a robust Rust library and a command-line interface for certificate operations, making it suitable for development, testing, and production environments.
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
+[![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+
+
+cutil is designed for developers who need to manage their own internal PKI infrastructure. It provides both a robust Rust library and a command-line interface for certificate operations, making it suitable for development, testing, and production environments.
 
 ## Features
 
