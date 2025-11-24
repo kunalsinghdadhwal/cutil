@@ -683,27 +683,6 @@ cutil chain server.pem
 ```
 
 ## Best Practices
-
-### Security Recommendations
-
-1. **Key Storage**: Store private keys in secure locations with appropriate file permissions (0600)
-2. **Algorithm Selection**: Use Ed25519 or ECDSA P-256 for new deployments
-3. **Validity Periods**: 
-   - Root CAs: 10-20 years
-   - Intermediate CAs: 5-10 years
-   - Server certificates: 1 year (recommended by CA/Browser Forum)
-   - Client certificates: 1-2 years
-4. **Revocation**: Implement CRL or OCSP for certificate revocation checking
-5. **Key Rotation**: Regularly rotate certificates and keys
-
-### Production Deployment
-
-1. **Separate Root and Intermediate CAs**: Keep root CA offline, use intermediate CA for daily operations
-2. **Backup**: Regularly backup CA certificates and keys
-3. **Monitoring**: Monitor certificate expiration dates
-4. **Automation**: Automate certificate renewal processes
-5. **Audit**: Maintain logs of all certificate operations
-
 ### Development and Testing
 
 ```rust
@@ -738,10 +717,7 @@ fn create_test_pki() -> Result<()> {
 Complete working examples are available in the repository:
 
 - **basic_ca.rs**: Create a CA and issue server/client certificates
-- **intermediate_ca.rs**: Set up a two-tier CA hierarchy
 - **fetch_remote.rs**: Fetch and inspect remote TLS certificates
-- **revocation.rs**: Certificate revocation workflow with CRL generation
-- **export_formats.rs**: Export certificates in various formats
 
 Run examples with:
 
@@ -765,34 +741,3 @@ CUtil is built on industry-standard cryptographic libraries:
 - **serde** / **serde_json**: JSON serialization support
 - **clap**: Command-line argument parsing
 - **p12**: PKCS#12 archive support
-
-## Contributing
-
-Contributions are welcome! Areas for contribution:
-
-- Additional signature algorithms
-- OCSP responder implementation
-- Certificate validation and chain verification
-- Additional export formats
-- Performance improvements
-- Documentation and examples
-
-Please submit issues and pull requests through the GitHub repository.
-
-## License
-
-Licensed under either of:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
-
-## Support
-
-For questions, issues, or feature requests, please use the GitHub issue tracker:
-https://github.com/kunalsinghdadhwal/cutil/issues
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
